@@ -21,6 +21,8 @@ import { useState } from "react";
 import { useStoreState } from "pullstate";
 import { store } from "./Store";
 import * as tf from "@tensorflow/tfjs";
+import labels from "./labels/birds.json";
+import Microphone from "./components/Microphone";
 
 export default function App() {
   const detected = useStoreState(store, (state) => state.detectedObjects);
@@ -33,18 +35,19 @@ export default function App() {
       ? (predictions.arraySync() as number[][])[0]
       : undefined;
 
-  const somateriaMolissimaProbability = +(
-    (predictionArray?.[835] ?? 0) * 100
-  ).toFixed();
-  const maxProbability = +(
+  const backgroundProbability = predictionArray
+    ? (predictionArray[964] * 100).toFixed()
+    : 0;
+  const maxProbability = (
     Math.max(...(predictionArray ?? [0])) * 100
   ).toFixed();
+  const minProbability = (
+    Math.min(...(predictionArray ?? [0])) * 100
+  ).toFixed();
 
-  console.log({
-    somateriaMolissimaProbability,
-    maxProbability,
-    predictions,
-  });
+  const maxIndex = predictionArray
+    ? predictionArray.indexOf(Math.max(...predictionArray))
+    : 0;
 
   return (
     <MantineProvider theme={{ colorScheme: "dark" }}>
@@ -121,16 +124,16 @@ export default function App() {
           css={css`
             display: grid;
             grid-template-areas:
-              "camera"
-              "detect";
-            place-items: center;
+              "feed feed"
+              "video audio";
+            place-items: start center;
             padding: 1rem;
             grid-gap: 1rem;
           `}
         >
           <div
             css={css`
-              grid-area: camera;
+              grid-area: feed;
               // Make video less distracting when developing
               opacity: 0.1;
             `}
@@ -139,21 +142,40 @@ export default function App() {
           </div>
           <div
             css={css`
-              grid-area: detect;
+              grid-area: video;
             `}
           >
-            <Title order={3}>Detected Objects</Title>
+            <Title order={3}>📹 Bird Classifier</Title>
             <List>
+              <List.Item>background ({backgroundProbability}%)</List.Item>
               <List.Item>
-                Somateria Mollissima (
-                {Math.min(100, somateriaMolissimaProbability * 100).toFixed()}%)
+                {/* @ts-ignore */}
+                max ({labels[maxIndex]} at {maxProbability}%)
               </List.Item>
+            </List>
+            <Title
+              order={3}
+              css={css`
+                margin-top: 1rem;
+              `}
+            >
+              📹 Detected Objects
+            </Title>
+            <List>
               {detected.map((result, i) => (
                 <List.Item key={[result.class, i].join("-")}>
                   {result.class} ({(result.score * 100).toFixed(0)}%)
                 </List.Item>
               ))}
             </List>
+          </div>
+          <div
+            css={css`
+              grid-area: audio;
+            `}
+          >
+            <Title order={3}>🎤 Audio Classifier</Title>
+            <Microphone />
           </div>
         </div>
       </AppShell>

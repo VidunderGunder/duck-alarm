@@ -21,8 +21,9 @@ const mirrored = true;
 export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
   const { model: detect, loading: loadingDetect } =
     useModel<cocoSsd.ObjectDetection>(cocoSsd);
-  const { model: classify, loading: loadingClassify } =
-    useGraphModel("/model/model.json");
+  const { model: classify, loading: loadingClassify } = useGraphModel(
+    "/models/birds-image/model.json"
+  );
 
   const [webcamContainerRef, bounds] = useMeasure();
 
