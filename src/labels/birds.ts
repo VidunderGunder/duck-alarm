@@ -1,4 +1,4 @@
-{
+export const birdLabels: Record<string | number, string> = {
   "0": "Haemorhous cassinii",
   "1": "Aramus guarauna",
   "2": "Rupornis magnirostris",

@@ -21,33 +21,19 @@ import { ComponentPropsWithoutRef, useState } from "react";
 import { useStoreState } from "pullstate";
 import { store } from "./Store";
 import { Tensor } from "@tensorflow/tfjs";
-import labels from "./labels/birds.json";
 import Microphone from "./components/Microphone";
+import { processPredictions } from "./functions/predict";
 
 export default function App() {
   const detected = useStoreState(store, (state) => state.detectedObjects);
+  const cameraBounds = useStoreState(store, (state) => state.cameraBounds);
+  const cameraConfig = useStoreState(store, (state) => state.cameraConfig);
+  const detectedBirds = useStoreState(store, (state) => state.detectedBirds);
   const predictions = useStoreState(store, (state) => state.predictions);
   const [opened, setOpened] = useState(false);
 
-  // Define predictionArray if predictions is defined and is a tensor of rank 2
-  const predictionArray =
-    predictions instanceof Tensor && predictions.rank === 2
-      ? (predictions.arraySync() as number[][])[0]
-      : undefined;
-
-  const backgroundProbability = predictionArray
-    ? (predictionArray[964] * 100).toFixed()
-    : 0;
-  const maxProbability = (
-    Math.max(...(predictionArray ?? [0])) * 100
-  ).toFixed();
-  const minProbability = (
-    Math.min(...(predictionArray ?? [0])) * 100
-  ).toFixed();
-
-  const maxIndex = predictionArray
-    ? predictionArray.indexOf(Math.max(...predictionArray))
-    : 0;
+  const { maxProbability, backgroundProbability, maxLabel } =
+    processPredictions(predictions);
 
   return (
     <MantineProvider theme={{ colorScheme: "dark" }}>
@@ -135,23 +121,107 @@ export default function App() {
             css={css`
               grid-area: feed;
               // Make video less distracting when developing
-              opacity: 0.1;
+              /* opacity: 0.1; */
             `}
           >
-            <Camera />
+            <div
+              css={css`
+                position: relative;
+              `}
+            >
+              <Camera />
+              {detected.map((thing, i) => {
+                if (thing.class === "bird") return null;
+
+                const [x, y, width, height] = thing.bbox;
+                const [xPercent, yPercent, widthPercent, heightPercent] = [
+                  100 * (x / cameraBounds.width),
+                  100 * (y / cameraBounds.height),
+                  100 * (width / cameraBounds.width),
+                  100 * (height / cameraBounds.height),
+                ];
+                const [top, left] = [yPercent, xPercent];
+
+                const mirrored = cameraConfig?.facingMode === "user";
+
+                return (
+                  <div
+                    key={[thing.class, ...thing.bbox].join("-")}
+                    css={css`
+                      position: absolute;
+                      top: ${top}%;
+                      left: ${mirrored ? 100 - left - widthPercent : left}%;
+                      width: ${widthPercent}%;
+                      height: ${heightPercent}%;
+                      border: 2px solid rgba(190, 7, 23, 0.5);
+                      padding: 0.5rem 1rem;
+                      border-radius: 1rem;
+                      background-color: rgba(190, 7, 23, 0.125);
+                    `}
+                  >
+                    <div
+                      css={css`
+                        filter: drop-shadow(0 0 0.1rem rgba(0, 0, 0, 0.5));
+                      `}
+                    >
+                      <b>{thing.class}</b>
+                    </div>
+                    <div>{(100 * thing.score).toFixed()}%</div>
+                  </div>
+                );
+              })}
+              {detectedBirds.map((thing, i) => {
+                const [x, y, width, height] = thing.bbox;
+                const [xPercent, yPercent, widthPercent, heightPercent] = [
+                  100 * (x / cameraBounds.width),
+                  100 * (y / cameraBounds.height),
+                  100 * (width / cameraBounds.width),
+                  100 * (height / cameraBounds.height),
+                ];
+                const [top, left] = [yPercent, xPercent];
+
+                const mirrored = cameraConfig?.facingMode === "user";
+
+                return (
+                  <div
+                    key={[thing.class, ...thing.bbox].join("-")}
+                    css={css`
+                      position: absolute;
+                      top: ${top}%;
+                      left: ${mirrored ? 100 - left - widthPercent : left}%;
+                      width: ${widthPercent}%;
+                      height: ${heightPercent}%;
+                      border: 2px solid rgba(17, 145, 96, 0.5);
+                      padding: 0.5rem 1rem;
+                      border-radius: 1rem;
+                      background-color: rgba(17, 145, 96, 0.125);
+                    `}
+                  >
+                    <div
+                      css={css`
+                        filter: drop-shadow(0 0 0.1rem rgba(0, 0, 0, 0.5));
+                      `}
+                    >
+                      <b>{thing.class}</b> ({thing.species})
+                    </div>
+                    <div>{(100 * thing.score).toFixed()}%</div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div
             css={css`
               grid-area: video;
             `}
           >
-            <Title order={3}>📹 Bird Classifier</Title>
+            <Title order={3}>📹 Bird Classifier (Whole Image)</Title>
             <LeftPad>
               <List>
                 <List.Item>background ({backgroundProbability}%)</List.Item>
                 <List.Item>
                   {/* @ts-ignore */}
-                  max ({labels[maxIndex]} at {maxProbability}%)
+                  max ({maxLabel} at {maxProbability}%)
                 </List.Item>
               </List>
             </LeftPad>
@@ -161,7 +231,7 @@ export default function App() {
                 margin-top: 1rem;
               `}
             >
-              📹 Detected Objects
+              📹 Detected Objects (Positioned)
             </Title>
             <LeftPad>
               <List>
@@ -181,6 +251,23 @@ export default function App() {
             <Title order={3}>🎤 Audio Classifier</Title>
             <LeftPad>
               <Microphone />
+            </LeftPad>
+            <Title
+              order={3}
+              css={css`
+                margin-top: 2.5rem;
+              `}
+            >
+              📹 Detected Birds (Positioned)
+            </Title>
+            <LeftPad>
+              <List>
+                {detectedBirds.map((result, i) => (
+                  <List.Item key={[result.class, i].join("-")}>
+                    {result.species}
+                  </List.Item>
+                ))}
+              </List>
             </LeftPad>
           </div>
         </div>

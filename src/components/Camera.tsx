@@ -14,11 +14,13 @@ import {
   Rank,
   scalar,
   Tensor,
+  Tensor3D,
 } from "@tensorflow/tfjs";
+import { birdLabels } from "../labels/birds";
 
-export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
+export function Camera(props: ComponentPropsWithoutRef<"div">) {
   const { model: detect, loading: loadingDetect } =
-    useModel<cocoSsd.ObjectDetection>(cocoSsd);
+    useModel<cocoSsd.ObjectDetection>(cocoSsd, "Detect");
   const { model: classify, loading: loadingClassify } = useGraphModel(
     "/models/birds-image/model.json"
   );
@@ -34,6 +36,24 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
 
   const video = webcamRef?.current?.video;
 
+  function predict(
+    image: Tensor3D
+  ): Tensor<Rank> | Tensor<Rank>[] | NamedTensorMap | undefined {
+    const imageResized = image.resizeNearestNeighbor([224, 224]).toFloat();
+    const imageNormalized = scalar(1.0).sub(imageResized.div(scalar(255.0)));
+    const imageBatched = imageNormalized.expandDims(0);
+    return classify?.predict(imageBatched);
+  }
+
+  // Update camera bounds to store on window resize
+  useEffect(() => {
+    if (bounds) {
+      store.update((s) => {
+        s.cameraBounds = bounds;
+      });
+    }
+  }, [bounds]);
+
   useEffect(() => {
     const interval = setInterval(
       async () => {
@@ -46,24 +66,70 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
           | NamedTensorMap
           | undefined;
 
+        let image: ReturnType<typeof browser.fromPixels>;
+
         try {
           detected = await detect?.detect(video, 20, 0.25);
 
-          console.log(detected);
-
-          const image = browser.fromPixels(video);
-          const imageResized = image
-            .resizeNearestNeighbor([224, 224])
-            .toFloat();
-          const imageNormalized = scalar(1.0).sub(
-            imageResized.div(scalar(255.0))
-          );
-          const imageBatched = imageNormalized.expandDims(0);
-          predicted = classify?.predict(imageBatched);
+          image = browser.fromPixels(video);
+          predicted = predict(image);
         } catch {
           return;
         }
 
+        // ------------
+        if (detected !== undefined) {
+          const detectedBirds = detected
+            .filter((thing) => {
+              return thing.class === "bird";
+            })
+            .map((bird) => {
+              const { bbox } = bird;
+              let [x, y, width, height] = bbox;
+
+              // convert to ints
+              [x, y, width, height] = [
+                Math.floor(x),
+                Math.floor(y),
+                Math.floor(width),
+                Math.floor(height),
+              ];
+
+              // Ensure the bounding box is within the image
+              [x, y, width, height] = [
+                Math.max(x, 0),
+                Math.max(y, 0),
+                Math.min(width, image.shape[0] - x),
+                Math.min(height, image.shape[1] - y),
+              ];
+
+              const birdImage = image.slice([y, x], [height, width]);
+
+              const birdSpecies = predict(birdImage);
+
+              let label: string | undefined;
+
+              if (birdSpecies instanceof Tensor && birdSpecies.rank === 2) {
+                const index = birdSpecies.argMax(1).arraySync();
+                if (Array.isArray(index)) {
+                  if (typeof index === "number") {
+                    label = birdLabels[index];
+                  }
+                }
+              }
+
+              return {
+                ...bird,
+                species: label ?? "unknown",
+              };
+            });
+          store.update((s) => {
+            s.detectedBirds = detectedBirds;
+          });
+        }
+
+        // Classify birds by species using bounding boxes from detections
+        // ------------
         store.update((s) => {
           if (detected !== undefined) {
             s.detectedObjects = detected;
@@ -79,12 +145,6 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
       clearInterval(interval);
     };
   }, [active]);
-
-  console.log({
-    active,
-    loadingClassify,
-    loadingDetect,
-  });
 
   return (
     <div
@@ -115,4 +175,4 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
       </div>
     </div>
   );
-};
+}
