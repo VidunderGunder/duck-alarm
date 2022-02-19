@@ -17,10 +17,10 @@ import Brand from "./components/Brand";
 import { Camera } from "./components/Camera";
 import { appCSS } from "./styles";
 import { FaCamera } from "react-icons/fa";
-import { useState } from "react";
+import { ComponentPropsWithoutRef, useState } from "react";
 import { useStoreState } from "pullstate";
 import { store } from "./Store";
-import * as tf from "@tensorflow/tfjs";
+import { Tensor } from "@tensorflow/tfjs";
 import labels from "./labels/birds.json";
 import Microphone from "./components/Microphone";
 
@@ -31,7 +31,7 @@ export default function App() {
 
   // Define predictionArray if predictions is defined and is a tensor of rank 2
   const predictionArray =
-    predictions instanceof tf.Tensor && predictions.rank === 2
+    predictions instanceof Tensor && predictions.rank === 2
       ? (predictions.arraySync() as number[][])[0]
       : undefined;
 
@@ -146,13 +146,15 @@ export default function App() {
             `}
           >
             <Title order={3}>📹 Bird Classifier</Title>
-            <List>
-              <List.Item>background ({backgroundProbability}%)</List.Item>
-              <List.Item>
-                {/* @ts-ignore */}
-                max ({labels[maxIndex]} at {maxProbability}%)
-              </List.Item>
-            </List>
+            <LeftPad>
+              <List>
+                <List.Item>background ({backgroundProbability}%)</List.Item>
+                <List.Item>
+                  {/* @ts-ignore */}
+                  max ({labels[maxIndex]} at {maxProbability}%)
+                </List.Item>
+              </List>
+            </LeftPad>
             <Title
               order={3}
               css={css`
@@ -161,13 +163,15 @@ export default function App() {
             >
               📹 Detected Objects
             </Title>
-            <List>
-              {detected.map((result, i) => (
-                <List.Item key={[result.class, i].join("-")}>
-                  {result.class} ({(result.score * 100).toFixed(0)}%)
-                </List.Item>
-              ))}
-            </List>
+            <LeftPad>
+              <List>
+                {detected.map((result, i) => (
+                  <List.Item key={[result.class, i].join("-")}>
+                    {result.class} ({(result.score * 100).toFixed(0)}%)
+                  </List.Item>
+                ))}
+              </List>
+            </LeftPad>
           </div>
           <div
             css={css`
@@ -175,10 +179,25 @@ export default function App() {
             `}
           >
             <Title order={3}>🎤 Audio Classifier</Title>
-            <Microphone />
+            <LeftPad>
+              <Microphone />
+            </LeftPad>
           </div>
         </div>
       </AppShell>
     </MantineProvider>
+  );
+}
+
+function LeftPad({ children, ...props }: ComponentPropsWithoutRef<"div">) {
+  return (
+    <div
+      css={css`
+        padding-left: 3rem;
+      `}
+      {...props}
+    >
+      {children}
+    </div>
   );
 }

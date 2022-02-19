@@ -1,4 +1,4 @@
-{
+export const audioLabels: Record<string | number, string> = {
   "0": "Speech",
   "1": "Child speech, kid speaking",
   "2": "Conversation",

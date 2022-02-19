@@ -1,29 +1,53 @@
+/** @jsxImportSource @emotion/react */
 import useGraphModel from "../hooks/useGraphModel";
-import * as tf from "@tensorflow/tfjs";
+import { data, Rank, Tensor } from "@tensorflow/tfjs";
 import { useEffect, useState } from "react";
-import { Button, List } from "@mantine/core";
+import { Button, List, Text } from "@mantine/core";
 import { log } from "@tensorflow/tfjs-core/dist/log";
 import { useStoreState } from "pullstate";
 import { store } from "../Store";
-import labels from "../labels/audio.json";
+import { audioLabels } from "../labels/audio";
+import { css } from "@emotion/react";
 
 /**
- * 111,/m/015p6,"Bird"
- * 112,/m/020bb7,"Bird vocalization, bird call, bird song"
- * 113,/m/07pggtn,"Chirp, tweet"
- * 114,/m/07sx8x_,"Squawk"
- * 115,/m/0h0rv,"Pigeon, dove"
- * 116,/m/07r_25d,"Coo"
- * 117,/m/04s8yn,"Crow"
- * 118,/m/07r5c2p,"Caw"
- * 119,/m/09d5_,"Owl"
- * 120,/m/07r_80w,"Hoot"
- * 121,/m/05_wcq,"Bird flight, flapping wings"
+ * Classifies audio using [yamnet](https://tfhub.dev/google/tfjs-model/yamnet/tfjs/1)
+ *
+ * Relevant bird classes:
+ *
+ * ```json
+ * {
+ *   ...
+ *   "93": "Fowl",
+ *   "94": "Chicken, rooster",
+ *   "95": "Cluck",
+ *   "96": "Crowing, cock-a-doodle-doo",
+ *   "97": "Turkey",
+ *   "98": "Gobble",
+ *   "99": "Duck",
+ *   "100": "Quack",
+ *   "101": "Goose",
+ *   "102": "Honk",
+ *   ...
+ *   "106": "Bird",
+ *   "107": "Bird vocalization, bird call, bird song",
+ *   "108": "Chirp, tweet",
+ *   "109": "Squawk",
+ *   "110": "Pigeon, dove",
+ *   "111": "Coo",
+ *   "112": "Crow",
+ *   "113": "Caw",
+ *   "114": "Owl",
+ *   "115": "Hoot",
+ *   "116": "Bird flight, flapping wings",
+ *   ...
+ * }
+ * ```
  */
 export default function Microphone() {
   const { model, loading } = useGraphModel("/models/sounds/model.json");
   const detected = useStoreState(store, (state) => state.detectedAudio);
   const [recording, setRecording] = useState(false);
+  const [mic, setMic] = useState<Awaited<ReturnType<typeof data.microphone>>>();
 
   /**
    * Get the waveform of the microphone input using tensorflow
@@ -31,24 +55,41 @@ export default function Microphone() {
   async function handleAudio() {
     setRecording(true);
 
-    const mic = await tf.data.microphone({
-      // fftSize: 1024,
-      // columnTruncateLength: 32,
-      // numFramesPerSpectrogram: 10,
-      // sampleRateHz: 48000,
-      includeSpectrogram: false,
-      includeWaveform: true,
-      audioTrackConstraints: {
-        echoCancellation: false,
-        noiseSuppression: false,
-      },
-    });
+    if (!mic) {
+      const mic = await data.microphone({
+        // fftSize: 1024,
+        // columnTruncateLength: 32,
+        // numFramesPerSpectrogram: 10,
+        // sampleRateHz: 48000,
+        includeSpectrogram: false,
+        includeWaveform: true,
+        audioTrackConstraints: {
+          echoCancellation: false,
+          noiseSuppression: false,
+        },
+      });
+
+      const sampleRate = mic.getSampleRate();
+
+      if (sampleRate !== 48000) {
+        throw new Error("Sample rate must be 48000");
+      }
+
+      setMic(mic);
+    }
+
+    if (!mic) {
+      setRecording(false);
+      return;
+    }
 
     // Record 3 seconds of audio
     const audio = await mic.capture();
 
-    mic.stop();
-    setRecording(false);
+    if (!audio) {
+      setRecording(false);
+      return;
+    }
 
     const flatAudio = audio.waveform.flatten();
 
@@ -57,61 +98,54 @@ export default function Microphone() {
       s.waveform = flatAudio;
     });
 
-    // @ts-ignore
-    const [scores] = model?.predict(flatAudio) ?? [];
+    const results = model?.predict(flatAudio) ?? [];
 
-    console.log(scores);
+    const predictable = Array.isArray(results);
 
-    // Get the top 5 predictions
-    const topPredictions: { label: string; score: number }[] = scores
-      // @ts-ignore
-      .sort((a, b) => b.value - a.value)
-      // @ts-ignore
-      .map((p) => {
-        // @ts-ignore
-        const label = labels.find((l) => l.id === p.indices[0]);
-        return {
-          label: label?.name ?? "Unknown",
-          score: p.value,
-        };
-      })
-      .slice(0, 5);
+    if (predictable) {
+      const [scores] = results;
+      const top = scores.mean(0).argMax().asScalar().arraySync();
+      const label = audioLabels[top];
 
-    const result = scores?.mean(0).argMax().arraySync();
-    store.update((s) => {
-      // s.detectedAudio = [
-      //   {
-      //     // @ts-ignore
-      //     label: labels[result] as string,
-      //     score: scores.mean(0).arraySync()[result],
-      //   },
-      // ];
-      s.detectedAudio = topPredictions;
-    });
+      store.update((s) => {
+        s.detectedAudio = label;
+      });
+    }
+
+    setRecording(false);
   }
 
   // Loop handleAudio every second
   useEffect(() => {
     if (!recording) {
-      const interval = setInterval(handleAudio, 1000);
+      const interval = setInterval(handleAudio, 250);
       return () => {
         clearInterval(interval);
       };
     }
+
+    return function cleanup() {};
   }, [!recording]);
+
+  // Stop mic on unmount
+  useEffect(() => {
+    return () => {
+      mic?.stop();
+    };
+  }, [mic]);
 
   return (
     <>
-      {/* <Button fullWidth disabled={loading || recording} onClick={handleAudio}>
-        {recording ? "Recording..." : "Record"}
-      </Button> */}
-      <List>
-        {detected.map((e, i) => (
-          <List.Item key={[e.label, i].join("-")}>
-            {e.label}: {(e.score * 100).toFixed()}%
-          </List.Item>
-        ))}
-      </List>
+      <Text>
+        {detected}{" "}
+        <i
+          css={css`
+            opacity: 0.5;
+          `}
+        >
+          (Most likely)
+        </i>
+      </Text>
     </>
   );
 }

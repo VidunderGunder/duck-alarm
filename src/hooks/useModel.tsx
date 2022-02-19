@@ -1,26 +1,28 @@
 import { useEffect, useState } from "react";
-import * as tf from "@tensorflow/tfjs";
+import { ready } from "@tensorflow/tfjs";
 
 type TFModel<T> = {
   load: () => Promise<T>;
 };
 
-export default function useModel<T>(tfModel: TFModel<T>) {
+export default function useModel<T>(tfModel: TFModel<T>, name = "Model") {
   const [model, setModel] = useState<T | null>(null);
 
   async function loadModel() {
     try {
       const _model = await tfModel.load();
       setModel(_model);
-      console.log("Model loaded");
+      console.log(name + " loaded");
     } catch (err) {
       console.log(err);
-      console.log("Model failed to load");
+      console.log(name + " failed to load");
     }
   }
 
   useEffect(() => {
-    tf.ready().then(() => {
+    ready().then(() => {
+      console.log("Tensorflow ready");
+
       loadModel();
     });
   }, []);

@@ -3,20 +3,18 @@ import { css } from "@emotion/react";
 import { ComponentPropsWithoutRef, useEffect, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import useMeasure from "react-use-measure";
-import { DetectedObject, store } from "../Store";
+import { store } from "../Store";
 import { useStoreState } from "pullstate";
 import useModel from "../hooks/useModel";
 import * as cocoSsd from "@tensorflow-models/coco-ssd";
-import * as tf from "@tensorflow/tfjs";
 import useGraphModel from "../hooks/useGraphModel";
-
-// MediaTrackConstraints
-const cameraConfig = {
-  width: 1280,
-  height: 720,
-  facingMode: "user",
-};
-const mirrored = true;
+import {
+  browser,
+  NamedTensorMap,
+  Rank,
+  scalar,
+  Tensor,
+} from "@tensorflow/tfjs";
 
 export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
   const { model: detect, loading: loadingDetect } =
@@ -25,12 +23,14 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
     "/models/birds-image/model.json"
   );
 
-  const [webcamContainerRef, bounds] = useMeasure();
-
-  const webcamRef = useRef<Webcam>(null);
   const [active, setActive] = useState(false);
 
+  const [webcamContainerRef, bounds] = useMeasure();
+  const webcamRef = useRef<Webcam>(null);
+
   const frequency = useStoreState(store, (state) => state.frequency);
+  const cameraConfig = useStoreState(store, (state) => state.cameraConfig);
+  const mirrored = cameraConfig?.facingMode === "user";
 
   const video = webcamRef?.current?.video;
 
@@ -39,22 +39,25 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
       async () => {
         if (!video) return;
 
-        let detected: DetectedObject[] | undefined;
+        let detected: cocoSsd.DetectedObject[] | undefined;
         let predicted:
-          | tf.Tensor<tf.Rank>
-          | tf.Tensor<tf.Rank>[]
-          | tf.NamedTensorMap
+          | Tensor<Rank>
+          | Tensor<Rank>[]
+          | NamedTensorMap
           | undefined;
 
         try {
-          detected = await detect?.detect(video);
-          const image = tf.browser.fromPixels(video);
+          detected = await detect?.detect(video, 20, 0.25);
+
+          console.log(detected);
+
+          const image = browser.fromPixels(video);
           const imageResized = image
             .resizeNearestNeighbor([224, 224])
             .toFloat();
-          const imageNormalized = tf
-            .scalar(1.0)
-            .sub(imageResized.div(tf.scalar(255.0)));
+          const imageNormalized = scalar(1.0).sub(
+            imageResized.div(scalar(255.0))
+          );
           const imageBatched = imageNormalized.expandDims(0);
           predicted = classify?.predict(imageBatched);
         } catch {
@@ -62,9 +65,12 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
         }
 
         store.update((s) => {
-          if (detected !== undefined) s.detectedObjects = detected;
-          if (predicted !== undefined && predicted instanceof tf.Tensor)
+          if (detected !== undefined) {
+            s.detectedObjects = detected;
+          }
+          if (predicted !== undefined && predicted instanceof Tensor) {
             s.predictions = predicted;
+          }
         });
       },
       frequency !== undefined ? 1000 / frequency : undefined
@@ -73,6 +79,12 @@ export const Camera = (props: ComponentPropsWithoutRef<"div">) => {
       clearInterval(interval);
     };
   }, [active]);
+
+  console.log({
+    active,
+    loadingClassify,
+    loadingDetect,
+  });
 
   return (
     <div

@@ -1,23 +1,30 @@
 import { Store } from "pullstate";
-import * as cocoSsd from "@tensorflow-models/coco-ssd";
-import * as tf from "@tensorflow/tfjs";
-
-export type DetectedObject = cocoSsd.DetectedObject;
+import { DetectedObject } from "@tensorflow-models/coco-ssd";
+import { Tensor, tensor, Rank } from "@tensorflow/tfjs";
 
 export const store = new Store<{
   detectedObjects: DetectedObject[];
-  detectedDucks: DetectedObject[];
-  predictions?: tf.Tensor<tf.Rank>;
-  // | tf.Tensor<tf.Rank>[] | tf.NamedTensorMap;
-  waveform: tf.Tensor<tf.Rank>;
-  detectedAudio: { label: string; score: number }[];
+  detectedBirds: ({ species: string } & DetectedObject)[];
+  predictions?: Tensor<Rank>;
+  waveform: Tensor<Rank>;
+  detectedAudio: string;
   threshold: number;
   frequency?: number;
+  cameraConfig?: {
+    width: number;
+    height: number;
+    facingMode: "user" | "environment";
+  };
 }>({
   detectedObjects: [],
-  detectedDucks: [],
-  waveform: tf.tensor([16000 * 3]),
-  detectedAudio: [],
+  detectedBirds: [],
+  waveform: tensor([16000 * 3]),
+  detectedAudio: "",
   threshold: 0.25,
   frequency: 1,
+  cameraConfig: {
+    width: 1280,
+    height: 720,
+    facingMode: "user",
+  },
 });
