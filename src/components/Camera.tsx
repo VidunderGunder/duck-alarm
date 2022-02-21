@@ -173,32 +173,24 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
   }, [active]);
 
   return (
-    <div {...props}>
-      <div
+    <div {...props} ref={webcamContainerRef}>
+      <Webcam
+        mirrored={mirrored}
+        audio={false}
+        id="video"
+        ref={webcamRef}
+        onUserMedia={async () => {
+          if (!active) setActive(true);
+        }}
+        width={"100%"}
+        height={"100%"}
+        videoConstraints={cameraConfig}
         css={css`
-          width: 100%;
-          height: 100%;
+          border-radius: 0.5em;
+          box-shadow: 0 3px 0 0 rgba(20, 20, 20, 1),
+            0 4px 14px -5px rgba(0, 0, 0, 0.5);
         `}
-        ref={webcamContainerRef}
-      >
-        <Webcam
-          mirrored={mirrored}
-          audio={false}
-          id="video"
-          ref={webcamRef}
-          onUserMedia={async () => {
-            if (!active) setActive(true);
-          }}
-          width={"100%"}
-          height={"100%"}
-          videoConstraints={cameraConfig}
-          css={css`
-            border-radius: 0.5em;
-            box-shadow: 0 3px 0 0 rgba(20, 20, 20, 1),
-              0 4px 14px -5px rgba(0, 0, 0, 0.5);
-          `}
-        />
-      </div>
+      />
     </div>
   );
 }
