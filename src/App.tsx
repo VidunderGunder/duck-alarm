@@ -316,7 +316,7 @@ function LeftPad({ children, ...props }: ComponentPropsWithoutRef<"div">) {
   return (
     <div
       css={css`
-        padding-left: 3rem;
+        padding-left: 0.375rem;
       `}
       {...props}
     >
