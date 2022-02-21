@@ -112,7 +112,10 @@ export default function App() {
             grid-template-areas:
               "feed feed"
               "video audio";
-            place-items: start center;
+            height: 100%;
+            grid-template-rows: 50% 50%;
+            grid-template-columns: 50% 50%;
+            place-items: start start;
             padding: 1rem;
             grid-gap: 1rem;
           `}
@@ -120,6 +123,8 @@ export default function App() {
           <div
             css={css`
               grid-area: feed;
+              height: 100%;
+              place-self: center;
               // Make video less distracting when developing
               /* opacity: 0.1; */
             `}
@@ -127,18 +132,25 @@ export default function App() {
             <div
               css={css`
                 position: relative;
+                height: 100%;
+                max-height: 100%;
+                overflow: hidden;
               `}
             >
-              <Camera />
+              <Camera
+                css={css`
+                  height: 100%;
+                `}
+              />
               {detected.map((thing, i) => {
                 if (thing.class === "bird") return null;
 
                 const [x, y, width, height] = thing.bbox;
                 const [xPercent, yPercent, widthPercent, heightPercent] = [
-                  100 * (x / cameraBounds.width),
-                  100 * (y / cameraBounds.height),
-                  100 * (width / cameraBounds.width),
-                  100 * (height / cameraBounds.height),
+                  100 * (x / cameraConfig.width),
+                  100 * (y / cameraConfig.height),
+                  100 * (width / cameraConfig.width),
+                  100 * (height / cameraConfig.height),
                 ];
                 const [top, left] = [yPercent, xPercent];
 
@@ -173,10 +185,10 @@ export default function App() {
               {detectedBirds.map((thing, i) => {
                 const [x, y, width, height] = thing.bbox;
                 const [xPercent, yPercent, widthPercent, heightPercent] = [
-                  100 * (x / cameraBounds.width),
-                  100 * (y / cameraBounds.height),
-                  100 * (width / cameraBounds.width),
-                  100 * (height / cameraBounds.height),
+                  100 * (x / cameraConfig.width),
+                  100 * (y / cameraConfig.height),
+                  100 * (width / cameraConfig.width),
+                  100 * (height / cameraConfig.height),
                 ];
                 const [top, left] = [yPercent, xPercent];
 
@@ -202,9 +214,12 @@ export default function App() {
                         filter: drop-shadow(0 0 0.1rem rgba(0, 0, 0, 0.5));
                       `}
                     >
-                      <b>{thing.class}</b> ({thing.species})
+                      <b>{thing.class}</b> ({(100 * thing.score).toFixed()}%)
                     </div>
-                    <div>{(100 * thing.score).toFixed()}%</div>
+                    <div>
+                      {thing.species} (
+                      {(100 * thing.speciesProbability).toFixed()}%)
+                    </div>
                   </div>
                 );
               })}
@@ -213,9 +228,10 @@ export default function App() {
           <div
             css={css`
               grid-area: video;
+              height: 100%;
             `}
           >
-            <Title order={3}>📹 Bird Classifier (Whole Image)</Title>
+            <Title order={5}>📹 Bird Classifier (Whole Image)</Title>
             <LeftPad>
               <List>
                 <List.Item>background ({backgroundProbability}%)</List.Item>
@@ -226,7 +242,7 @@ export default function App() {
               </List>
             </LeftPad>
             <Title
-              order={3}
+              order={5}
               css={css`
                 margin-top: 1rem;
               `}
@@ -248,12 +264,12 @@ export default function App() {
               grid-area: audio;
             `}
           >
-            <Title order={3}>🎤 Audio Classifier</Title>
+            <Title order={5}>🎤 Audio Classifier</Title>
             <LeftPad>
               <Microphone />
             </LeftPad>
             <Title
-              order={3}
+              order={5}
               css={css`
                 margin-top: 2.5rem;
               `}
@@ -264,7 +280,8 @@ export default function App() {
               <List>
                 {detectedBirds.map((result, i) => (
                   <List.Item key={[result.class, i].join("-")}>
-                    {result.species}
+                    {result.species} (
+                    {(result.speciesProbability * 100).toFixed()}%)
                   </List.Item>
                 ))}
               </List>

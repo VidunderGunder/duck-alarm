@@ -10,11 +10,14 @@ import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import useGraphModel from "../hooks/useGraphModel";
 import {
   browser,
+  dispose,
+  disposeVariables,
   NamedTensorMap,
   Rank,
   scalar,
   Tensor,
   Tensor3D,
+  tidy,
 } from "@tensorflow/tfjs";
 import { birdLabels } from "../labels/birds";
 
@@ -70,9 +73,8 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
 
         try {
           detected = await detect?.detect(video, 20, 0.25);
-
-          image = browser.fromPixels(video);
-          predicted = predict(image);
+          image = tidy(() => browser.fromPixels(video));
+          predicted = tidy(() => predict(image));
         } catch {
           return;
         }
@@ -96,24 +98,44 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
               ];
 
               // Ensure the bounding box is within the image
-              [x, y, width, height] = [
-                Math.max(x, 0),
-                Math.max(y, 0),
-                Math.min(width, image.shape[0] - x),
-                Math.min(height, image.shape[1] - y),
+              [x, y] = [Math.max(x, 0), Math.max(y, 0)];
+              [width, height] = [
+                Math.min(width, cameraConfig.width - x),
+                Math.min(height, cameraConfig.height - y),
               ];
 
               const birdImage = image.slice([y, x], [height, width]);
-
-              const birdSpecies = predict(birdImage);
+              const birdSpecies = tidy(() => predict(birdImage));
+              dispose(birdImage);
 
               let label: string | undefined;
+              let probability: number | undefined;
 
               if (birdSpecies instanceof Tensor && birdSpecies.rank === 2) {
-                const index = birdSpecies.argMax(1).arraySync();
-                if (Array.isArray(index)) {
-                  if (typeof index === "number") {
-                    label = birdLabels[index];
+                // Get element at index 1 from tensor
+                const species = tidy(() => birdSpecies.as1D());
+
+                // Get the index of the highest probability
+                const index = tidy(() => species.argMax().arraySync());
+                probability = tidy(
+                  () => species.gather([index]).arraySync()[0]
+                );
+
+                if (typeof index === "number") {
+                  label = birdLabels[index];
+                  if (label === "background") {
+                    const indexSecond = tidy(() =>
+                      species
+                        .slice([1], [species.shape[0] - 1])
+                        .argMax()
+                        .arraySync()
+                    );
+                    if (typeof indexSecond === "number") {
+                      probability = tidy(
+                        () => species.gather([indexSecond]).arraySync()[0]
+                      );
+                      label = birdLabels[indexSecond];
+                    }
                   }
                 }
               }
@@ -121,6 +143,7 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
               return {
                 ...bird,
                 species: label ?? "unknown",
+                speciesProbability: probability ?? 0,
               };
             });
           store.update((s) => {
@@ -138,6 +161,9 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
             s.predictions = predicted;
           }
         });
+
+        dispose(image);
+        disposeVariables();
       },
       frequency !== undefined ? 1000 / frequency : undefined
     );
@@ -147,14 +173,14 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
   }, [active]);
 
   return (
-    <div
-      css={css`
-        position: relative;
-        width: 100%;
-      `}
-      {...props}
-    >
-      <div ref={webcamContainerRef}>
+    <div {...props}>
+      <div
+        css={css`
+          width: 100%;
+          height: 100%;
+        `}
+        ref={webcamContainerRef}
+      >
         <Webcam
           mirrored={mirrored}
           audio={false}

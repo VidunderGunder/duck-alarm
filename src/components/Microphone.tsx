@@ -71,9 +71,9 @@ export default function Microphone() {
 
       const sampleRate = mic.getSampleRate();
 
-      if (sampleRate !== 48000) {
-        throw new Error("Sample rate must be 48000");
-      }
+      // if (sampleRate !== 48000) {
+      //   throw new Error("Sample rate must be 48000");
+      // }
 
       setMic(mic);
     }

@@ -5,13 +5,16 @@ import { RectReadOnly } from "react-use-measure";
 
 export const store = new Store<{
   detectedObjects: DetectedObject[];
-  detectedBirds: ({ species: string } & DetectedObject)[];
+  detectedBirds: ({
+    species: string;
+    speciesProbability: number;
+  } & DetectedObject)[];
   predictions?: Tensor<Rank>;
   waveform: Tensor<Rank>;
   detectedAudio: string;
   threshold: number;
   frequency?: number;
-  cameraConfig?: {
+  cameraConfig: {
     width: number;
     height: number;
     facingMode: "user" | "environment";
@@ -23,7 +26,7 @@ export const store = new Store<{
   waveform: tensor([16000 * 3]),
   detectedAudio: "",
   threshold: 0.25,
-  frequency: 5,
+  frequency: 10,
   cameraConfig: {
     width: 1280,
     height: 720,
