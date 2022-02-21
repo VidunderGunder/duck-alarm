@@ -4,6 +4,7 @@ import {
   AppShell,
   Burger,
   Button,
+  Center,
   Code,
   Container,
   Header,
@@ -26,7 +27,7 @@ import { Tensor } from "@tensorflow/tfjs";
 import Microphone from "./components/Microphone";
 import { processPredictions } from "./functions/predict";
 
-const navbarPixelHeight = 70;
+const navbarPixelHeight = 50;
 
 export default function App() {
   const detected = useStoreState(store, (state) => state.detectedObjects);
@@ -44,6 +45,30 @@ export default function App() {
       <Global styles={appCSS} />
       <AppShell
         padding={0}
+        navbarOffsetBreakpoint="sm"
+        header={
+          <Header height={navbarPixelHeight} padding="sm">
+            {/* Handle other responsive styles with MediaQuery component or createStyles function */}
+            <div
+              css={css`
+                display: flex;
+                align-items: center;
+                height: 100%;
+              `}
+            >
+              <MediaQuery largerThan="sm" styles={{ display: "none" }}>
+                <Burger
+                  opened={opened}
+                  onClick={() => setOpened((o) => !o)}
+                  size="sm"
+                  // color={theme.colors.gray[6]}
+                  mr="xl"
+                />
+              </MediaQuery>
+              <Brand />
+            </div>
+          </Header>
+        }
         navbar={
           <Navbar
             width={{ base: 300 }}
@@ -83,38 +108,13 @@ export default function App() {
                 : theme.colors.gray[0],
           },
         })}
-        navbarOffsetBreakpoint="sm"
-        header={
-          <Header height={navbarPixelHeight} padding="md">
-            {/* Handle other responsive styles with MediaQuery component or createStyles function */}
-            <div
-              css={css`
-                display: flex;
-                align-items: center;
-                height: 100%;
-              `}
-            >
-              <MediaQuery largerThan="sm" styles={{ display: "none" }}>
-                <Burger
-                  opened={opened}
-                  onClick={() => setOpened((o) => !o)}
-                  size="sm"
-                  // color={theme.colors.gray[6]}
-                  mr="xl"
-                />
-              </MediaQuery>
-              <Brand />
-            </div>
-          </Header>
-        }
       >
-        <Container>
-          <ScrollArea
-            css={css`
-              height: 100%;
-              height: calc(100vh - ${navbarPixelHeight}px);
-            `}
-          >
+        <ScrollArea
+          css={css`
+            height: calc(100vh - ${navbarPixelHeight}px);
+          `}
+        >
+          <Container>
             <div
               css={css`
                 display: grid;
@@ -124,13 +124,17 @@ export default function App() {
                 place-items: start start;
                 padding: 1rem;
                 grid-gap: 1rem;
-                height: 100%;
+                overflow: scroll;
               `}
             >
-              <div
+              <Center
                 css={css`
                   grid-area: feed;
                   place-self: center;
+                  height: 100%;
+                  padding: 2rem 0;
+                  max-height: 300px;
+
                   // Make video less distracting when developing
                   /* opacity: 0.1; */
                 `}
@@ -138,11 +142,13 @@ export default function App() {
                 <div
                   css={css`
                     position: relative;
+
+                    height: 100%;
                   `}
                 >
                   <Camera
                     css={css`
-                      height: min(50vh, 50%);
+                      height: 100%;
                     `}
                   />
                   {detected.map((thing, i) => {
@@ -228,7 +234,7 @@ export default function App() {
                     );
                   })}
                 </div>
-              </div>
+              </Center>
               <div
                 css={css`
                   grid-area: video;
@@ -299,8 +305,8 @@ export default function App() {
                 </LeftPad>
               </div>
             </div>
-          </ScrollArea>
-        </Container>
+          </Container>
+        </ScrollArea>
       </AppShell>
     </MantineProvider>
   );
