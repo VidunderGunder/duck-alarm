@@ -132,8 +132,8 @@ export default function App() {
                   grid-area: feed;
                   place-self: center;
                   height: 100%;
-                  padding: 2rem 0;
-                  max-height: min(40vh, 400px);
+                  padding: 0.5rem 0;
+                  max-height: min(30vh, 300px);
 
                   // Make video less distracting when developing
                   /* opacity: 0.1; */
@@ -142,7 +142,6 @@ export default function App() {
                 <div
                   css={css`
                     position: relative;
-
                     height: 100%;
                   `}
                 >

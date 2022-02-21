@@ -59,7 +59,7 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
 
   // Update camera config on component load
   useEffect(() => {
-    store.update((s) => {
+    const videoIsPortrait = store.update((s) => {
       s.cameraConfig = {
         width: video?.videoWidth ?? 1280,
         height: video?.videoHeight ?? 720,
