@@ -133,7 +133,7 @@ export default function App() {
                   place-self: center;
                   height: 100%;
                   padding: 2rem 0;
-                  max-height: 300px;
+                  max-height: min(40vh, 400px);
 
                   // Make video less distracting when developing
                   /* opacity: 0.1; */
