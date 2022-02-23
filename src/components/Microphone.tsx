@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import useGraphModel from "../hooks/useGraphModel";
-import { data, Rank, Tensor } from "@tensorflow/tfjs";
+import { data, Rank, Tensor, tidy } from "@tensorflow/tfjs";
 import { useEffect, useState } from "react";
 import { Button, List, Text } from "@mantine/core";
 import { log } from "@tensorflow/tfjs-core/dist/log";
@@ -98,12 +98,13 @@ export default function Microphone() {
       s.waveform = flatAudio;
     });
 
-    const results = model?.predict(flatAudio) ?? [];
+    const results = tidy(() => model?.predict(flatAudio)) ?? [];
 
-    const predictable = Array.isArray(results);
+    const predictable = Array.isArray(results) && results[0] instanceof Tensor;
 
     if (predictable) {
       const [scores] = results;
+
       const top = scores.mean(0).argMax().asScalar().arraySync();
       const label = audioLabels[top];
 
