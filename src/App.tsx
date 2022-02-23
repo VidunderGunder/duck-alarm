@@ -15,6 +15,7 @@ import {
   ScrollArea,
   Text,
   Title,
+  useMantineTheme,
 } from "@mantine/core";
 import Brand from "./components/Brand";
 import { Camera } from "./components/Camera";
@@ -23,13 +24,13 @@ import { FaCamera } from "react-icons/fa";
 import { ComponentPropsWithoutRef, useState } from "react";
 import { useStoreState } from "pullstate";
 import { store } from "./Store";
-import { Tensor } from "@tensorflow/tfjs";
 import Microphone from "./components/Microphone";
 import { processPredictions } from "./functions/predict";
 
 const navbarPixelHeight = 50;
 
 export default function App() {
+  const theme = useMantineTheme();
   const detected = useStoreState(store, (state) => state.detectedObjects);
   const cameraBounds = useStoreState(store, (state) => state.cameraBounds);
   const cameraConfig = useStoreState(store, (state) => state.cameraConfig);
@@ -100,14 +101,6 @@ export default function App() {
             </Navbar.Section> */}
           </Navbar>
         }
-        styles={(theme) => ({
-          main: {
-            backgroundColor:
-              theme.colorScheme === "dark"
-                ? theme.colors.dark[8]
-                : theme.colors.gray[0],
-          },
-        })}
       >
         <ScrollArea
           css={css`
@@ -122,9 +115,9 @@ export default function App() {
                   "feed feed"
                   "video audio";
                 place-items: start start;
-                padding: 1rem;
-                grid-gap: 1rem;
-                overflow: scroll;
+                /* padding: 1rem; */
+                /* grid-gap: 1rem; */
+                /* overflow: scroll; */
               `}
             >
               <Center
