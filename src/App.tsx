@@ -177,6 +177,7 @@ export default function App() {
                           padding: 0.5rem 1rem;
                           border-radius: 1rem;
                           background-color: rgba(190, 7, 23, 0.125);
+                          opacity: ${thing.score < 0.75 ? thing.score : 1};
                         `}
                       >
                         <div
@@ -215,6 +216,7 @@ export default function App() {
                           padding: 0.5rem 1rem;
                           border-radius: 1rem;
                           background-color: rgba(17, 145, 96, 0.125);
+                          opacity: ${thing.score < 0.5 + 0.1 ? thing.score : 1};
                         `}
                       >
                         <div
