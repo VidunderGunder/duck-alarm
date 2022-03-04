@@ -108,12 +108,22 @@ export function Camera(props: ComponentPropsWithoutRef<"div">) {
                 Math.floor(height),
               ];
 
+              // Pad the bounding box
+              const paddingPercentage = 0.25;
+
+              x -= Math.floor(width * paddingPercentage);
+              y -= Math.floor(height * paddingPercentage);
+              width += Math.floor(2 * (width * paddingPercentage));
+              height += Math.floor(2 * (height * paddingPercentage));
+
               // Ensure the bounding box is within the image
               [x, y] = [Math.max(x, 0), Math.max(y, 0)];
               [width, height] = [
                 Math.min(width, cameraConfig.width - x),
                 Math.min(height, cameraConfig.height - y),
               ];
+
+              bird.bbox = [x, y, width, height];
 
               const birdImage = image.slice([y, x], [height, width]);
               const birdSpecies = tidy(() => predict(birdImage));
