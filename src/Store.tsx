@@ -18,6 +18,7 @@ export const store = new Store<{
     width: number;
     height: number;
     facingMode: "user" | "environment";
+    placeholder: boolean;
   };
   cameraBounds: RectReadOnly;
 }>({
@@ -31,6 +32,7 @@ export const store = new Store<{
     width: 1280,
     height: 720,
     facingMode: "user",
+    placeholder: true,
   },
   cameraBounds: {
     left: 0,
