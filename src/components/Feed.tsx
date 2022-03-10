@@ -1,7 +1,13 @@
 /** @jsxImportSource @emotion/react */
 
 import { css } from "@emotion/react";
-import { ComponentPropsWithoutRef, useEffect, useRef, useState } from "react";
+import {
+  ComponentPropsWithoutRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import Webcam from "react-webcam";
 import useMeasure from "react-use-measure";
 import { store } from "../Store";
@@ -22,7 +28,6 @@ import {
 } from "@tensorflow/tfjs";
 import { birdLabels } from "../labels/birds";
 import ReactPlayer from "react-player";
-import { Box } from "@mantine/core";
 
 export function Feed(props: ComponentPropsWithoutRef<"div">) {
   const { model: detect, loading: loadingDetect } =
@@ -35,20 +40,19 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
 
   const [webcamContainerRef, bounds] = useMeasure();
   const webcamRef = useRef<Webcam>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const playerRef = useRef<ReactPlayer>(null);
+  const videoRef = useRef<ReactPlayer>(null);
 
   const frequency = useStoreState(store, (state) => state.frequency);
-  const cameraConfig = useStoreState(store, (state) => state.cameraConfig);
-  const mirrored = cameraConfig?.facingMode === "user";
+  const cam = useStoreState(store, (state) => state.cam);
+  const mirrored = !cam?.placeholder && cam?.facingMode === "user";
 
-  const video = webcamRef?.current?.video;
-  const canvas = canvasRef?.current;
-  const player = playerRef?.current?.getInternalPlayer();
+  // console.log(iframe?.contentWindow?.document);
+  // Check that `youtubeVideo` is of type `HTMLVideoElement`
 
-  console.log(video);
-  console.log(canvas);
-  console.log(player);
+  const video =
+    cam.placeholder && videoRef.current?.getInternalPlayer()
+      ? (videoRef.current?.getInternalPlayer() as HTMLVideoElement)
+      : webcamRef?.current?.video;
 
   function predict(
     image: Tensor3D
@@ -57,6 +61,18 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
     const imageNormalized = scalar(1.0).sub(imageResized.div(scalar(255.0)));
     const imageBatched = imageNormalized.expandDims(0);
     return classify?.predict(imageBatched);
+  }
+
+  async function ready() {
+    async () => {
+      if (cam.ready) return;
+      store.update((s) => {
+        s.cam = {
+          ...s.cam,
+          ready: true,
+        };
+      });
+    };
   }
 
   // Update camera bounds to store on window resize
@@ -70,31 +86,21 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
 
   // Update camera config on component load
   useEffect(() => {
-    if (cameraConfig.placeholder) {
-      store.update((s) => {
-        s.cameraConfig = {
-          width: canvas?.width ?? 1280,
-          height: canvas?.height ?? 720,
-          facingMode: "user",
-          placeholder: s.cameraConfig?.placeholder ?? true,
-        };
-      });
-    } else {
-      store.update((s) => {
-        s.cameraConfig = {
-          width: video?.videoWidth ?? 1280,
-          height: video?.videoHeight ?? 720,
-          facingMode: "user",
-          placeholder: s.cameraConfig?.placeholder ?? true,
-        };
-      });
-    }
-  }, []);
+    store.update((s) => {
+      s.cam = {
+        width: video?.videoWidth !== 0 ? video?.videoWidth ?? 1280 : 1280,
+        height: video?.videoHeight !== 0 ? video?.videoHeight ?? 720 : 720,
+        facingMode: "user",
+        placeholder: s.cam?.placeholder ?? true,
+        ready: s.cam.ready,
+      };
+    });
+  }, [video, cam.ready]);
 
   useEffect(() => {
     const interval = setInterval(
       async () => {
-        if (!canvas || !video) return;
+        if (!video) return;
 
         let detected: cocoSsd.DetectedObject[] | undefined;
         let predicted:
@@ -106,14 +112,8 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
         let image: ReturnType<typeof browser.fromPixels>;
 
         try {
-          detected = await detect?.detect(
-            cameraConfig.placeholder ? canvas : video,
-            20,
-            0.25
-          );
-          image = tidy(() =>
-            browser.fromPixels(cameraConfig.placeholder ? canvas : video)
-          );
+          detected = await detect?.detect(video, 20, 0.25);
+          image = tidy(() => browser.fromPixels(video));
           predicted = tidy(() => predict(image));
         } catch {
           return;
@@ -148,8 +148,8 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
               // Ensure the bounding box is within the image
               [x, y] = [Math.max(x, 0), Math.max(y, 0)];
               [width, height] = [
-                Math.min(width, cameraConfig.width - x),
-                Math.min(height, cameraConfig.height - y),
+                Math.min(width, cam.width - x),
+                Math.min(height, cam.height - y),
               ];
 
               bird.bbox = [x, y, width, height];
@@ -228,43 +228,30 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
       ref={webcamContainerRef}
       css={css`
         position: relative;
-        border-radius: 0.5em;
+        /* border-radius: 0.5em;
         box-shadow: 0 3px 0 0 rgba(20, 20, 20, 1),
-          0 4px 14px -5px rgba(0, 0, 0, 0.5);
+          0 4px 14px -5px rgba(0, 0, 0, 0.5); */
         overflow: hidden;
       `}
     >
-      {cameraConfig.placeholder ? (
+      {cam.placeholder ? (
         <>
-          <Box
-            css={css`
-              position: relative;
-              padding-top: 56.25%;
-
-              .react-player {
-                position: absolute;
-                top: 0;
-                left: 0;
-              }
-            `}
-          >
-            <ReactPlayer
-              ref={playerRef}
-              className="react-player"
-              url={[
-                "https://www.youtube.com/watch?v=f7wY4Cnuk-s",
-                "https://www.youtube.com/watch?v=GM-PbqdWr68",
-                "https://www.youtube.com/watch?v=099UcfY-rQI",
-                "https://www.youtube.com/watch?v=JnKrN2NkY_M",
-                "https://www.youtube.com/watch?v=zIRVadlcRoM",
-              ]}
-              width="100%"
-              height="100%"
-              controls
-              playing
-              loop
-            />
-          </Box>
+          <ReactPlayer
+            ref={videoRef}
+            playing
+            muted
+            loop
+            controls
+            width="100%"
+            height="100%"
+            url="/videos/various.mp4"
+            playsInline
+            onReady={ready}
+            onPlay={ready}
+            // css={css`
+            //   transform: scaleX(-1);
+            // `}
+          />
         </>
       ) : (
         <Webcam
@@ -274,10 +261,24 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
           ref={webcamRef}
           onUserMedia={async () => {
             if (!active) setActive(true);
+            store.update((s) => {
+              s.cam = {
+                ...s.cam,
+                ready: true,
+              };
+            });
           }}
           width="100%"
           height="100%"
-          videoConstraints={cameraConfig}
+          // css={css`
+          //   width: 100%;
+          //   height: 100%;
+          // `}
+          videoConstraints={{
+            width: cam.width,
+            height: cam.height,
+            facingMode: cam.facingMode,
+          }}
         />
       )}
     </div>

@@ -14,11 +14,12 @@ export const store = new Store<{
   detectedAudio: string;
   threshold: number;
   frequency?: number;
-  cameraConfig: {
+  cam: {
     width: number;
     height: number;
     facingMode: "user" | "environment";
     placeholder: boolean;
+    ready: boolean;
   };
   cameraBounds: RectReadOnly;
 }>({
@@ -28,11 +29,12 @@ export const store = new Store<{
   detectedAudio: "",
   threshold: 0.25,
   frequency: 10,
-  cameraConfig: {
+  cam: {
     width: 1280,
     height: 720,
     facingMode: "user",
     placeholder: true,
+    ready: false,
   },
   cameraBounds: {
     left: 0,

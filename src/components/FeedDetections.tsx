@@ -8,9 +8,12 @@ import { store } from "../Store";
 
 export default function FeedDetections() {
   // props: ComponentPropsWithoutRef<typeof Box>
-  const cameraConfig = useStoreState(store, (state) => state.cameraConfig);
+  const cam = useStoreState(store, (state) => state.cam);
+  // const bounds = useStoreState(store, (state) => state.cameraBounds);
   const detected = useStoreState(store, (state) => state.detectedObjects);
   const detectedBirds = useStoreState(store, (state) => state.detectedBirds);
+
+  console.log(cam);
 
   return (
     // Box
@@ -29,14 +32,14 @@ export default function FeedDetections() {
 
         const [x, y, width, height] = thing.bbox;
         const [xPercent, yPercent, widthPercent, heightPercent] = [
-          100 * (x / cameraConfig.width),
-          100 * (y / cameraConfig.height),
-          100 * (width / cameraConfig.width),
-          100 * (height / cameraConfig.height),
+          100 * (x / cam.width),
+          100 * (y / cam.height),
+          100 * (width / cam.width),
+          100 * (height / cam.height),
         ];
         const [top, left] = [yPercent, xPercent];
 
-        const mirrored = cameraConfig?.facingMode === "user";
+        const mirrored = !cam?.placeholder && cam?.facingMode === "user";
 
         return (
           <div
@@ -68,14 +71,14 @@ export default function FeedDetections() {
       {detectedBirds.map((thing, i) => {
         const [x, y, width, height] = thing.bbox;
         const [xPercent, yPercent, widthPercent, heightPercent] = [
-          100 * (x / cameraConfig.width),
-          100 * (y / cameraConfig.height),
-          100 * (width / cameraConfig.width),
-          100 * (height / cameraConfig.height),
+          100 * (x / cam.width),
+          100 * (y / cam.height),
+          100 * (width / cam.width),
+          100 * (height / cam.height),
         ];
         const [top, left] = [yPercent, xPercent];
 
-        const mirrored = cameraConfig?.facingMode === "user";
+        const mirrored = cam?.facingMode === "user";
 
         return (
           <div

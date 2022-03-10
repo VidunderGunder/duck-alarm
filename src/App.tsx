@@ -42,7 +42,7 @@ export default function App() {
         padding={0}
         navbarOffsetBreakpoint="sm"
         header={
-          <Header height={navbarPixelHeight} padding="sm">
+          <Header height={navbarPixelHeight} p="sm">
             {/* Handle other responsive styles with MediaQuery component or createStyles function */}
             <div
               css={css`
@@ -67,7 +67,7 @@ export default function App() {
         navbar={
           <Navbar
             width={{ base: 300 }}
-            padding="sm"
+            p="sm"
             hiddenBreakpoint="sm"
             hidden={!opened}
           >

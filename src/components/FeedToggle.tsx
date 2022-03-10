@@ -10,7 +10,7 @@ import { store } from "../Store";
 export default function FeedToggle(
   props: ComponentPropsWithoutRef<typeof Box>
 ) {
-  const cameraConfig = useStoreState(store, (state) => state.cameraConfig);
+  const cameraConfig = useStoreState(store, (state) => state.cam);
 
   return (
     <Box {...props}>
@@ -27,7 +27,7 @@ export default function FeedToggle(
           css={css`
             display: flex;
             align-items: center;
-            justify-content: end;
+            justify-content: flex-end;
             gap: 0.25em;
           `}
         >
@@ -41,7 +41,8 @@ export default function FeedToggle(
           checked={!cameraConfig.placeholder}
           onChange={(e) => {
             store.update((s) => {
-              s.cameraConfig.placeholder = !e.currentTarget.checked;
+              s.cam.ready = false;
+              s.cam.placeholder = !e.currentTarget.checked;
             });
           }}
         />
