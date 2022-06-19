@@ -1,4 +1,4 @@
 node_modules
 .DS_Store
-public/videos/*.mp4
-public/videos/*.webm
+# public/videos/*.mp4
+# public/videos/*.webm
