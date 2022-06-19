@@ -39,12 +39,6 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
   );
   const modelsReady = !loadingDetect && !loadingClassify;
 
-  console.log({
-    loadingDetect,
-    loadingClassify,
-    modelsReady,
-  });
-
   const [camActive, setCamActive] = useState(false);
 
   const [webcamContainerRef, bounds] = useMeasure();
@@ -231,7 +225,7 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
     return () => {
       clearInterval(interval);
     };
-  }, [camActive]);
+  }, [camActive, cam.ready]);
 
   return (
     <div
@@ -255,21 +249,20 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
             controls
             width="100%"
             height="100%"
-            url="/videos/various.mp4"
+            url="/videos/chill.mp4"
             playsInline
             onReady={() => {
               if (camActive) setCamActive(false);
             }}
+            // onStart={() => {
+            //   console.log("onStart");
+            // }}
             onPlay={() => {
-              console.log("onPlay");
               onReady();
             }}
-            onStart={() => {
-              console.log("onStart");
-            }}
-            onProgress={() => {
-              console.log("onProgress");
-            }}
+            // onProgress={async () => {
+            //   if (!cam.ready) await onReady();
+            // }}
             // css={css`
             //   transform: scaleX(-1);
             // `}
