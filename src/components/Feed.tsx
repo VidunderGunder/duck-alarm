@@ -5,6 +5,7 @@ import {
   ComponentPropsWithoutRef,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -28,6 +29,7 @@ import {
 } from "@tensorflow/tfjs";
 import { birdLabels } from "../labels/birds";
 import ReactPlayer from "react-player";
+import { useForceUpdate } from "@mantine/hooks";
 
 export function Feed(props: ComponentPropsWithoutRef<"div">) {
   const { model: detect, loading: loadingDetect } =
@@ -35,8 +37,15 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
   const { model: classify, loading: loadingClassify } = useGraphModel(
     "/models/birds-image/model.json"
   );
+  const modelsReady = !loadingDetect && !loadingClassify;
 
-  const [active, setActive] = useState(false);
+  console.log({
+    loadingDetect,
+    loadingClassify,
+    modelsReady,
+  });
+
+  const [camActive, setCamActive] = useState(false);
 
   const [webcamContainerRef, bounds] = useMeasure();
   const webcamRef = useRef<Webcam>(null);
@@ -63,16 +72,18 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
     return classify?.predict(imageBatched);
   }
 
-  async function ready() {
-    async () => {
-      if (cam.ready) return;
-      store.update((s) => {
-        s.cam = {
-          ...s.cam,
-          ready: true,
-        };
-      });
-    };
+  async function onReady() {
+    if (!modelsReady || cam.ready) return;
+
+    // wait a second
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    store.update((s) => {
+      s.cam = {
+        ...s.cam,
+        ready: true,
+      };
+    });
   }
 
   // Update camera bounds to store on window resize
@@ -220,7 +231,7 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
     return () => {
       clearInterval(interval);
     };
-  }, [active]);
+  }, [camActive]);
 
   return (
     <div
@@ -238,7 +249,7 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
         <>
           <ReactPlayer
             ref={videoRef}
-            playing
+            playing={modelsReady}
             muted
             loop
             controls
@@ -246,8 +257,19 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
             height="100%"
             url="/videos/various.mp4"
             playsInline
-            onReady={ready}
-            onPlay={ready}
+            onReady={() => {
+              if (camActive) setCamActive(false);
+            }}
+            onPlay={() => {
+              console.log("onPlay");
+              onReady();
+            }}
+            onStart={() => {
+              console.log("onStart");
+            }}
+            onProgress={() => {
+              console.log("onProgress");
+            }}
             // css={css`
             //   transform: scaleX(-1);
             // `}
@@ -259,14 +281,9 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
           audio={false}
           id="video"
           ref={webcamRef}
-          onUserMedia={async () => {
-            if (!active) setActive(true);
-            store.update((s) => {
-              s.cam = {
-                ...s.cam,
-                ready: true,
-              };
-            });
+          onUserMedia={() => {
+            if (!camActive) setCamActive(true);
+            onReady();
           }}
           width="100%"
           height="100%"

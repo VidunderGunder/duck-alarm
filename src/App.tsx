@@ -23,6 +23,7 @@ import Microphone from "./components/Microphone";
 import { processPredictions } from "./functions/predict";
 import Camera from "./components/Camera";
 import FeedToggle from "./components/FeedToggle";
+import { log } from "@tensorflow/tfjs";
 
 const navbarPixelHeight = 50;
 

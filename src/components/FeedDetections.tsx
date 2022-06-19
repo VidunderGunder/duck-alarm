@@ -13,8 +13,6 @@ export default function FeedDetections() {
   const detected = useStoreState(store, (state) => state.detectedObjects);
   const detectedBirds = useStoreState(store, (state) => state.detectedBirds);
 
-  console.log(cam);
-
   return (
     // Box
     //   css={css`
@@ -78,7 +76,7 @@ export default function FeedDetections() {
         ];
         const [top, left] = [yPercent, xPercent];
 
-        const mirrored = cam?.facingMode === "user";
+        const mirrored = !cam?.placeholder && cam?.facingMode === "user";
 
         return (
           <div
