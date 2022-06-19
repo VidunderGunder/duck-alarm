@@ -29,7 +29,6 @@ import {
 } from "@tensorflow/tfjs";
 import { birdLabels } from "../labels/birds";
 import ReactPlayer from "react-player";
-import { useForceUpdate } from "@mantine/hooks";
 
 export function Feed(props: ComponentPropsWithoutRef<"div">) {
   const { model: detect, loading: loadingDetect } =
@@ -70,7 +69,7 @@ export function Feed(props: ComponentPropsWithoutRef<"div">) {
     if (!modelsReady || cam.ready) return;
 
     // wait a second
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     store.update((s) => {
       s.cam = {
